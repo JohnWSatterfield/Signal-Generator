@@ -40,11 +40,14 @@
 
 //Dial display position------------------------------------------------
 //Position of dial display
-
-#define center_offset  0  // move dial left or right of centr
-#define center_offset  0
+#ifdef SHORT16_OK
+  #define center_offset  DISP_L/2  // move dial left or right of centr
+#endif
+#ifndef SHORT16_OK
+  #define center_offset  0
+#endif
 #define top_position    60  // 60 top of dial - larger moves it up, smaller moves it down
-#define top_margin      30 // 
+#define top_margin      DISP_TM  // 
 
 
 
@@ -98,22 +101,38 @@
 //#define DialBGCol   CL_DIAL_BG
 #define TFT_BLACK2  0x0020  //opaque black
 
+//#if MC_TYPE == S3MINI || MC_TYPE == S2MINI || MC_TYPE == S3ZERO || MC_TYPE == T7S3 || MC_TYPE == R8N16 || MC_TYPE == S3R8 || MC_TYPE == C3ZERO || MC_TYPE == RP2040 || MC_TYPE == C3FH4 || MC_TYPE == C3MINI
+  //#define SPIHOST SPI2_HOST  // SPI2_HOST or SPI3_HOST 
+//#endif
+//#if MC_TYPE == WROVER || MC_TYPE == D1MINI || MC_TYPE == WROOM
+  ////#define SPIHOST HSPI_HOST // VSPI_HOST or HSPI_HOST
+//#endif
 
-#define SPIHOST SPI2_HOST  // SPI2_HOST or SPI3_HOST 
+//#define LGFX_ESP32_S2
+#define SPIHOST SPI2_HOST
 
 #include <LovyanGFX.hpp>
 class LGFX : public lgfx::LGFX_Device
 {
-
+  #if MC_TYPE != S3R8
   lgfx::Panel_ST7789  _panel_instance;
   lgfx::Bus_SPI       _bus_instance;
-
-
+  #endif
+  #if  MC_TYPE == R8N16
+   lgfx::Light_PWM     _light_instance;
+  #endif
+  #if MC_TYPE == S3R8
+  lgfx::Panel_ST7789  _panel_instance;
+  lgfx::Bus_Parallel8 _bus_instance;
+  lgfx::Light_PWM     _light_instance;
+  #endif
+  
+  
 public:
   LGFX(void)
   {
-   
-    { //  Configuring the SPI bus
+    #if MC_TYPE != S3R8    
+    { // // Configuring the SPI bus
       auto cfg = _bus_instance.config();    // Get the structure for bus settings.
       cfg.spi_host = SPIHOST;     // Select the SPI to use ESP32-S2,C3: SPI2_HOST or SPI3_HOST / ESP32: VSPI_HOST or HSPI_HOST
       // Due to the ESP-IDF version update, the description of VSPI_HOST and HSPI_HOST will be deprecated, so if an error occurs, please use SPI2_HOST and SPI3_HOST instead.
@@ -131,7 +150,27 @@ public:
       _bus_instance.config(cfg);    // Reflects the setting value on the bus.
       _panel_instance.setBus(&_bus_instance);      // Place the bus on the panel.
     }
-
+    #endif
+    #if MC_TYPE == S3R8             // LCD data interface, 8bit MCU (8080)
+        {
+        auto cfg = _bus_instance.config();
+        //cfg.i2s_port = I2S_NUM_0;
+        cfg.freq_write = 20000000;
+        cfg.pin_wr   = TFT_WR;
+        cfg.pin_rd   = TFT_RD;
+        cfg.pin_rs   = TFT_DC;              // Set SPI D/C pin number (-1 = disable)
+        cfg.pin_d0   = TFT_D0;
+        cfg.pin_d1   = TFT_D1;
+        cfg.pin_d2   = TFT_D2;
+        cfg.pin_d3   = TFT_D3;
+        cfg.pin_d4   = TFT_D4;
+        cfg.pin_d5   = TFT_D5;
+        cfg.pin_d6   = TFT_D6;
+        cfg.pin_d7   = TFT_D7;
+        _bus_instance.config(cfg);    // Reflects the setting value on the bus.
+        _panel_instance.setBus(&_bus_instance);      // Place the bus on the panel.
+        }
+    #endif
     { // Configure display panel control settings.
       auto cfg = _panel_instance.config();    // Gets the structure for display panel settings.
       cfg.pin_cs           =    TFT_CS;   // in number to which CS is connected (-1 = disable)
@@ -166,11 +205,21 @@ public:
       // Please set the following only if the display is misaligned with a variable pixel number driver such as ST7735 or ILI9163.
       //cfg.memory_width     =   180;  // Maximum width supported by driver IC / Output resolution width
       //cfg.memory_height    =   320;  // Maximum height supported by driver IC / Output resolution height
-      
+      //_light_instance.config(cfg);
       _panel_instance.config(cfg);
       
     }  
-
+   #if MC_TYPE == S3R8 || MC_TYPE == R8N16
+    {
+      auto cfg = _light_instance.config();
+       cfg.pin_bl            = TFT_BL;
+       cfg.invert            = false;
+       cfg.freq              = 44100;
+       cfg.pwm_channel       = 7;
+      _light_instance.config(cfg);
+      _panel_instance.setLight(&_light_instance);
+    }
+    #endif
     setPanel(&_panel_instance); // Set the panel to be used.
   }
 };
