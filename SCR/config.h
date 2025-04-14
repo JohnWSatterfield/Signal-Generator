@@ -388,7 +388,7 @@
 
 #if MC_TYPE == WROVER         //Compiler directive for Lilygo T7 Ver 1.5 
 #if LPF_CTRL == LPFBCD        //Select BCD LPF control
-  #define BCD1     17           //Select Filter
+  #define BCD1     27           //Select Filter
   #define BCD2     26           //Select Filter
   #define BCD3      2           //Select Filter
   #define BCD4      0           //Select Filter

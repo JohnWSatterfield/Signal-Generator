@@ -233,7 +233,12 @@ void setup() {
     
     si5351.correction(CORRECTION);     //input frequency correction into Si5351
     si5351.setPower(0,SIOUT_8mA);      //set output power of Si5351
-    set_frequency();                   //set initial frequency of Si5351
+  #if  LPF_CTRL == LPFBCD
+    set_frequency();                      //send frequency to Si5351
+  #endif
+  #if LPF_CTRL == LPF4052
+    set_frequency_PCF();                  //send frequency to Si5351
+  #endif     
     si5351.reset();                    //reset PLL of Si5351
     if (i2c_found) {                   //determine if connected to i2c
       Serial.println("si5351 OK");     //Si5351 connected to i2c
@@ -292,7 +297,12 @@ if (lockFlag==HIGH) {                                    //Check to see if encod
   Serial.print(freq); Serial.print("  ");               //serial monitor diagnostic report
   Serial.println(encodercount);                         //serial monitor diagnostic report
   if(freq<=8000) freq=8000;                             //test for absolute low frequency value
-  set_frequency();                                      //send frequency change to Si5351
+  #if  LPF_CTRL == LPFBCD
+    set_frequency();                      //send frequency to Si5351
+  #endif
+  #if LPF_CTRL == LPF4052
+    set_frequency_PCF();                  //send frequency to Si5351
+  #endif     
   f_dchange=1;                                          //set display change flat to true (1)
   encodercountlast = 0; encodercount =0;                //reset encodercount and flag
   }
@@ -374,7 +384,16 @@ void loop() {    // begin main loop here
   if ((lockFlag) && (digitalRead(Step)==HIGH))serialprintcount();                     
   //ByPass switch detection
   if (digitalRead(ByPass)==LOW) {ByPassFlag = LOW; ByPassFlagLast = LOW;}
-  if ((digitalRead(ByPass)==HIGH) && (!ByPassFlagLast)){ByPassFlagLast=HIGH;ByPassFlag=HIGH;set_frequency();}
+  if ((digitalRead(ByPass)==HIGH) && (!ByPassFlagLast)){
+    ByPassFlagLast=HIGH;
+    ByPassFlag=HIGH;
+  #if  LPF_CTRL == LPFBCD
+    set_frequency();                      //send frequency to Si5351
+  #endif
+  #if LPF_CTRL == LPF4052
+    set_frequency_PCF();                  //send frequency to Si5351
+  #endif     
+    }
   #if LPF_CTRL == LPFBCD        //Select BCD LPF control
   if ((!ByPassFlag)) { digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,HIGH);ByPassFlag=HIGH;} //BCD 1001
   #endif
@@ -491,8 +510,12 @@ void mem_change() {             //procedure for changing memories
   delay(20);
   f_dchange=1;                            //set display renew flag to true (1)
   memoryLast=LOW;                         //reset memoryLast flag to false
-
-  set_frequency();                        //send frequency to Si5351
+#if  LPF_CTRL == LPFBCD
+    set_frequency();                      //send frequency to Si5351
+  #endif
+  #if LPF_CTRL == LPF4052
+    set_frequency_PCF();                  //send frequency to Si5351
+  #endif     
 }
 
 void freqrecall(){                        //code for recalling the saved frequencies 
@@ -527,7 +550,12 @@ void freqrecall(){                        //code for recalling the saved frequen
     case 6: freq = freqf[memory-1];break;
   }
   setstep();                              //set step for default in current band
-  set_frequency();                        //send frequency to Si5351
+  #if  LPF_CTRL == LPFBCD
+    set_frequency();                      //send frequency to Si5351
+  #endif
+  #if LPF_CTRL == LPF4052
+    set_frequency_PCF();                  //send frequency to Si5351
+  #endif                       
   f_dchange=1;                            //write the band change to the display
   delay(5);           
   //Serial.println(count);                //diagnostics
@@ -745,64 +773,93 @@ void display_freq() {    //code to display the current selected frequency in the
     #endif
 }
 
+#if  LPF_CTRL == LPFBCD
 void set_frequency() { //procedure for setting output frequency
-  long freqh;
-  #if  LPF_CTRL == LPFBCD
-  if (count != 6) {    //Atlas only band
-    if (freq > 9990000) freqh = freq-IF_OFFSET; else freqh=freq+IF_OFFSET; //above 9.99MHz freq - offset else freq + offset
-    si5351.setFreq(0,freqh); //above 9.99MHz freq - offset else freq + offset
-    Serial.println(freq);
+  if (count != 6) {    //Atlas only bands
+    if (freq > 9990000) si5351.setFreq(0,(freq-IF_OFFSET)); 
+      else si5351.setFreq(0,(freq+IF_OFFSET)); //above 9.99MHz freq - offset else freq + offset
     if ((digitalRead(ByPass)==HIGH)) {  //Bypass is off (High)
-    if (((freqh) >  8000000) && ((freqh) <  14500001)) {  //80, 40 & 20m bands
-      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,LOW); digitalWrite(BCD4,LOW);} //BCD 1100
-    if (((freqh) >  15355000) && ((freqh) < 22755001)) {  //15m band
-      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,HIGH);digitalWrite(BCD4,LOW);}  //BCD 1010
-    if (((freqh) > 22655000) && ((freqh) < 24055001)) {   //10m band
-      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,HIGH);digitalWrite(BCD4,LOW);} //BCD 1110
-    }
-  }
-  else {
+    if (freq > 23500000) {   //10m band
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,HIGH);digitalWrite(BCD4,LOW);}       //1110
+    if ((freq > 15000000) && (freq < 23500001)) {   //15m band
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,HIGH);digitalWrite(BCD4,LOW);}        //1010
+    if (freq < 15000001) {  //160m, 80m, 40m, 20m band
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,LOW); digitalWrite(BCD4,LOW);}       //1100
+    } else {digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,HIGH);}  //1001 in byPass mode
+    } else {
     si5351.setFreq(0,freq);                 //send freq to Si5351
     if ((digitalRead(ByPass)==HIGH)) {      //Bypass is off (High)
     Serial.print("ByPassSwitch is High ");  //diagnostics
-    if ((freq >100000000) && (freq <200000001)) {digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,HIGH);}
-    if ((freq > 50000000) && (freq <100000001)) {digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,HIGH);}
-    if ((freq > 34000000) && (freq < 50000001)) {digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,HIGH);} //BCD 1001
-    if ((freq > 24000000) && (freq < 34000001)) {digitalWrite(BCD1,HIGH); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,HIGH);digitalWrite(BCD4,LOW);} //1110
-    if ((freq > 14500000) && (freq < 24000001)) {digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,HIGH);digitalWrite(BCD4,LOW);}  //1010
-    if ((freq >  8000000) && (freq < 14500001)) {digitalWrite(BCD1,HIGH); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);}  //1100
-    if ((freq >  4500000) && (freq <  8000001)) {digitalWrite(BCD1,LOW); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);}   //0100
-    if ((freq >  3500000) && (freq <  4500001)) {digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);}   //1000
-    if ( freq <  3500001) {si5351.setPower(0,SIOUT_2mA); digitalWrite(BCD1,LOW); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);}                          //0000
-    } else Serial.print("ByPassSwitch is Low ");  //diagnostics
-  }
-  Serial.print(digitalRead(BCD1));Serial.print(digitalRead(BCD2));Serial.print(digitalRead(BCD3));Serial.println(digitalRead(BCD4));  //diagnostics
-  #endif
-  #if  LPF_CTRL == LPF4052
-  if (count != 6) {    //Atlas only band
-    switch (count) {
-      case 1: digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); break;
-      case 2: digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW); break;
-      case 3: digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); break;
-      case 4: digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW); break;
-      case 5: digitalWrite(MUX0,LOW); digitalWrite(MUX1,HIGH); break;
+    if (freq > 34000000) { digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,HIGH);} //1001
+    if ((freq > 23500000) && (freq < 34000001)) { 
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,HIGH);digitalWrite(BCD4,LOW);} //1110
+    if ((freq > 15000000) && (freq < 23500001)) { 
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,HIGH);digitalWrite(BCD4,LOW);}  //1010
+    if ((freq >  8000000) && (freq < 15000001)) { 
+      digitalWrite(BCD1,LOW); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);}  //0100
+    if ((freq >  4500000) && (freq <  8000001)) { 
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);}  //1000
+    if ((freq >  2200000) && (freq <  4500001)) { 
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);}  //1100
+    if ( freq <  2200000) { 
+      digitalWrite(BCD1,LOW); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);}    //0000
+    } else { 
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,HIGH);   //1001 in byPass mode
+      Serial.print("ByPassSwitch is Low ");  //diagnostics
     }
   }
-  else {
-    si5351.setFreq(0,freq);                 //send freq to Si5351
-    if ((digitalRead(ByPass)==HIGH)) {      //Bypass is off (High)
-    Serial.print("ByPassSwitch is High ");  //diagnostics
-    if ((freq > 30000000) ) {digitalWrite(MUX0,HIGH); digitalWrite(MUX1,HIGH);}
-    if ((freq > 23000000) && (freq < 30000001)) {digitalWrite(MUX0,LOW); digitalWrite(MUX1,HIGH);}
-    if ((freq > 22000000) && (freq < 14500001)) {digitalWrite(MUX0,LOW); digitalWrite(MUX1,HIGH);}
-    if ((freq > 15000000) && (freq < 26000001)) {digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW);}
-    if ((freq > 10000000) && (freq <  1500001)) {digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW);}
-    if ( freq < 10000001) {digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW);}
-    } else {digitalWrite(MUX0,HIGH); digitalWrite(MUX1,HIGH);Serial.print("ByPassSwitch is on (Low) ");}  //diagnostics
-  }
-  #endif
+  Serial.print(digitalRead(BCD1));Serial.print(digitalRead(BCD2));    //diagnostics
+  Serial.print(digitalRead(BCD3));Serial.println(digitalRead(BCD4));  //diagnostics
   }  
-    
+#endif
+
+#if  LPF_CTRL == LPF4052
+void set_frequency_PCF() { //procedure for setting output frequency
+  if (count != 6) {    //Atlas only band
+    if (freq > 10500000) si5351.setFreq(0,(freq-IF_OFFSET)); 
+      else si5351.setFreq(0,(freq+IF_OFFSET)); //above 9.99MHz freq - offset else freq + offset
+    if ((digitalRead(ByPass)==HIGH)) {  //Bypass is off (High)
+    if (freq > 23500000) {   //10m band
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,HIGH); } // 01
+    if ((freq > 15000000) && (freq < 23500001)) {   //15m band
+      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW); } // 10
+    if ((freq >  8000000) && (freq < 15000001)) {   //20m band
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); }  // 00
+    if ((freq >  4500000) && (freq <  8000001)) {   //40m band
+      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW); } // 10
+    if ((freq >  2200000) && (freq <  4500001)) {   //80m band
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); }  // 00
+    if (freq  <  2200001) {                         //160m band
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); }  // 00
+    } else {
+      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,HIGH);  // 11 in byPass mode
+      Serial.print("ByPassSwitch is Low ");  //diagnostics
+    }
+    } else {
+    si5351.setFreq(0,freq);                 //send freq to Si5351
+    if ((digitalRead(ByPass)==HIGH)) {      //Bypass is off (High)
+    Serial.print("ByPassSwitch is High ");  //diagnostics
+    if (freq > 34000000){
+      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,HIGH); } // 11
+    if ((freq > 23500000) && (freq < 34000001)) { 
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,HIGH); }  // 01
+    if ((freq > 15000000) && (freq < 23500001)) { 
+      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW); }  // 10
+    if ((freq >  8000000) && (freq < 15000001)) { 
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); }   // 00
+    if ((freq >  4500000) && (freq <  8000001)) { 
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); }   // 00
+    if ((freq >  2200000) && (freq <  4500001)) { 
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); }   // 00
+    if ( freq <  2200000) { digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW);}  //00
+    } else {
+      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,HIGH);   // 11 in byPass mode
+      Serial.print("ByPassSwitch is Low ");  //diagnostics
+    }
+  }
+  Serial.print(digitalRead(MUX0));Serial.print(digitalRead(MUX1));  //diagnostics
+  }  
+#endif   
 
 void bandpresets() {                      //procedure for settings first time through in setup
   count = 2;                              //set to band number - 1 (band 2 set count=1)
@@ -821,15 +878,14 @@ void bandpresets() {                      //procedure for settings first time th
   stp = 1;          //set default step position of band to 1 KHz
   setstep();                              //set step for default in current band
   Serial.println(freq);
-  set_frequency();                        //send frequency to Si5351
+  #if  LPF_CTRL == LPFBCD
+    set_frequency();                        //send frequency to Si5351
+  #endif
+  #if LPF_CTRL == LPF4052
+    set_frequency_PCF();
+  #endif
   f_dchange=1;                            //write the band change to the display
   delay(5); 
-  #if  LPF_CTRL == LPFBCD  
-    Serial.print(digitalRead(BCD1));Serial.print(digitalRead(BCD2));Serial.print(digitalRead(BCD3));Serial.println(digitalRead(BCD4));  //diagnostics
-  #endif
-  #if  LPF_CTRL == LPF4052
-    digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW);
-  #endif
 }
 
 void display_write() {                               // procedure to write to the screen
