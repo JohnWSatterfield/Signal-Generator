@@ -101,7 +101,7 @@
  *   Remember, you are calibrating the Si5351 module, not the radio.  
 ----------------------------------------------------------*/
 
-#define CORRECTION     3466   //tuned on 20m at 14.250 - 8605000 typically 2.881 x freq = correction change
+#define CORRECTION     1467   //tuned on 20m at 14.250 - 8605000 typically 2.881 x freq = correction change
 
 
 //T21 3466       MCU SigGen 
@@ -365,6 +365,7 @@
 #define CORRECTION       0ULL        // Default correction is 0
 #define CORRECTION_MCU   0           // Default correction is 0
 #define EncoderStep     12           // use for 100 PIR
+#define TEXT   "      BAND                                                                       MEM"  //Displays above small text
 #endif
 
 #if PREFERENCE == JOHN

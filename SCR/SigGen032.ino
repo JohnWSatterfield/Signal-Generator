@@ -168,7 +168,7 @@ unsigned long previousMillis1 = 0; //timer 1 start value
 int memory=1;                      //Variable for keeping track of current memory displayed
 int recall_count=0;                //Variable for first memory in when doing band change
 //int recall[6] = {1,1,1,1,1,3};     //matrix for restoring memory on band changes value 1-6
-int stpRecall[6] = {1,1,1,1,1,7};  //array for restoring frequency step on band changes value 1-7
+int stpRecall[6] = {1,1,1,1,1,8};  //array for restoring frequency step on band changes value 1-7
 int ActiveBand = 1;                //Variable for controlling band selected
 int OldBand = 1;                   //Variable for last band selected
 int HoldBand = 0;                  //Variable used while changing bands
@@ -232,7 +232,7 @@ void setup() {
     i2c_found = si5351.init(25000000); //initialize the crystal frequency
     
     si5351.correction(CORRECTION);     //input frequency correction into Si5351
-    si5351.setPower(0,SIOUT_8mA);      //set output power of Si5351
+    si5351.setPower(0,SIOUT_4mA);      //set output power of Si5351
   #if  LPF_CTRL == LPFBCD
     set_frequency();                      //send frequency to Si5351
   #endif
@@ -400,6 +400,7 @@ void loop() {    // begin main loop here
   #if LPF_CTRL == LPF4052        //Select 74HCt4052 LPF control
   if ((!ByPassFlag)) { digitalWrite(MUX0,HIGH); digitalWrite(MUX1,HIGH);}
   #endif
+  
   if (f_dchange==1) display_write();                       //routine to write the display
  
 }
@@ -590,9 +591,15 @@ void display_step() {                      //code to display step frequency on s
   #endif
   #if DISP_SIZE == CUSTOM_DISP
   sprites[flip].setFont(&fonts::Font4); // Set font
-  sprites[flip].setTextSize(0.6f);      // Scale font size
-  sprites[flip].setTextColor(CL_NUM_O); // Set font color
-  sprites[flip].setCursor(145, T1_POS+15 );    // Place cursor here - Step value - up/down
+  #if PREFERENCE == CLINT
+    sprites[flip].setTextSize(0.9f);      // Scale font size
+    sprites[flip].setTextColor(CL_NUM_O); // Set font color
+    sprites[flip].setCursor(128, T1_POS+3 );    // Place cursor here - Step value - up/down
+  #else
+    sprites[flip].setTextSize(0.6f);      // Scale font size
+    sprites[flip].setTextColor(CL_NUM_O); // Set font color
+    sprites[flip].setCursor(145, T1_POS+15 );    // Place cursor here - Step value - up/down
+  #endif
   sprites[flip].print(step_str);        // send to sprite memory
   #endif
 }
@@ -623,9 +630,15 @@ void display_mem() {                    //code to display the current memory A, 
   #endif
   #if DISP_SIZE == CUSTOM_DISP
   sprites[flip].setFont(&fonts::Font4);// Set font size
-  sprites[flip].setTextSize(0.6f);     // Set font scale
-  sprites[flip].setTextColor(CL_NUM);  // Set font color
-  sprites[flip].setCursor(275, T1_POS+15 );   // Place cursor  - Move Mem Channel up/down
+  #if PREFERENCE == CLINT
+    sprites[flip].setTextSize(0.8f);     // Set font scale
+    sprites[flip].setTextColor(CL_NUM);  // Set font color
+    sprites[flip].setCursor(285, T1_POS+15 );   // Place cursor  - Move Mem Channel up/down
+  #else
+    sprites[flip].setTextSize(0.6f);     // Set font scale
+    sprites[flip].setTextColor(CL_NUM);  // Set font color
+    sprites[flip].setCursor(275, T1_POS+15 );   // Place cursor  - Move Mem Channel up/down
+  #endif
   sprites[flip].print(mem_str);        // Send sprites to memory
   #endif
 }
@@ -684,9 +697,15 @@ void display_band() {                              //code to display the current
   #endif
   #if DISP_SIZE == CUSTOM_DISP
   sprites[flip].setFont(&fonts::Font4); // Set font
-  sprites[flip].setTextSize(0.6f);      // Scale font size
-  sprites[flip].setTextColor(CL_NUM);   // Set font color
-  sprites[flip].setCursor(20, T1_POS+15 );     // place cursor here - Band value up/down
+  #if PREFERENCE == CLINT
+    sprites[flip].setTextSize(0.8f);      // Scale font size
+    sprites[flip].setTextColor(CL_NUM);   // Set font color
+    sprites[flip].setCursor(20, T1_POS+15 );     // place cursor here - Band value up/down
+  #else
+    sprites[flip].setTextSize(0.6f);      // Scale font size
+    sprites[flip].setTextColor(CL_NUM);   // Set font color
+    sprites[flip].setCursor(20, T1_POS+15 );     // place cursor here - Band value up/down
+  #endif
   sprites[flip].print(band_str);        // send to sprite memory
   #endif
 }
@@ -755,8 +774,8 @@ void display_freq() {    //code to display the current selected frequency in the
     sprites[flip].setTextColor(CL_NUM_TEXT);   // Set font color
     sprites[flip].setCursor(2, T1_POS );       // place cursor here - Band/Step/MEM up/down
     sprites[flip].print(TEXT);             // send to sprite memory
-    sprites[flip].drawRoundRect(5,F1_POS,314,40,15,CL_FREQ_BOX); // draw box (x1,y1,x2,y2,thick,color) (0,15,320,40,5,)
-    sprites[flip].drawRoundRect(6,F1_POS+1,312,38,15,CL_FREQ_BOX);
+    sprites[flip].drawRoundRect(10,F1_POS,309,40,15,CL_FREQ_BOX); // draw box (x1,y1,x2,y2,thick,color) (0,15,320,40,5,)
+    //sprites[flip].drawRoundRect(6,F1_POS+1,312,38,15,CL_FREQ_BOX);
     sprites[flip].setFont(&fonts::Font6);  // set font type and size to Font6
     sprites[flip].setTextSize(0.55, 0.81); // text size 0.55x, 0.81y - Frequency text size
     sprites[flip].setTextColor(CL_F_NUM);  // text color set in config
@@ -776,6 +795,7 @@ void display_freq() {    //code to display the current selected frequency in the
 #if  LPF_CTRL == LPFBCD
 void set_frequency() { //procedure for setting output frequency
   if (count != 6) {    //Atlas only bands
+    si5351.setPower(0,SIOUT_4mA);
     if (freq > 9990000) si5351.setFreq(0,(freq-IF_OFFSET)); 
       else si5351.setFreq(0,(freq+IF_OFFSET)); //above 9.99MHz freq - offset else freq + offset
     if ((digitalRead(ByPass)==HIGH)) {  //Bypass is off (High)
@@ -790,19 +810,41 @@ void set_frequency() { //procedure for setting output frequency
     si5351.setFreq(0,freq);                 //send freq to Si5351
     if ((digitalRead(ByPass)==HIGH)) {      //Bypass is off (High)
     Serial.print("ByPassSwitch is High ");  //diagnostics
-    if (freq > 34000000) { digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,HIGH);} //1001
+    if (freq > 150000000) { 
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,HIGH); //1001
+      si5351.setPower(0,SIOUT_4mA);
+      } 
+    if ((freq > 100000000) && (freq < 150000001)) { 
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,HIGH);  //1001
+      si5351.setPower(0,SIOUT_6mA);
+    }
+    if ((freq > 34000000) && (freq < 100000001)) { 
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,HIGH);  //1001
+      si5351.setPower(0,SIOUT_8mA);
+    }
     if ((freq > 23500000) && (freq < 34000001)) { 
-      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,HIGH);digitalWrite(BCD4,LOW);} //1110
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,HIGH);digitalWrite(BCD4,LOW); //1110
+      si5351.setPower(0,SIOUT_8mA);
+    }
     if ((freq > 15000000) && (freq < 23500001)) { 
-      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,HIGH);digitalWrite(BCD4,LOW);}  //1010
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,HIGH);digitalWrite(BCD4,LOW);  //1010
+    }
     if ((freq >  8000000) && (freq < 15000001)) { 
-      digitalWrite(BCD1,LOW); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);}  //0100
+      digitalWrite(BCD1,LOW); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);  //0100
+      si5351.setPower(0,SIOUT_8mA);
+    }
     if ((freq >  4500000) && (freq <  8000001)) { 
-      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);}  //1000
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);  //1000
+      si5351.setPower(0,SIOUT_8mA);
+    }
     if ((freq >  2200000) && (freq <  4500001)) { 
-      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);}  //1100
+      digitalWrite(BCD1,HIGH); digitalWrite(BCD2,HIGH); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);  //1100
+      si5351.setPower(0,SIOUT_8mA);
+    }
     if ( freq <  2200000) { 
-      digitalWrite(BCD1,LOW); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);}    //0000
+      digitalWrite(BCD1,LOW); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,LOW);    //0000
+      si5351.setPower(0,SIOUT_8mA);
+    }
     } else { 
       digitalWrite(BCD1,HIGH); digitalWrite(BCD2,LOW); digitalWrite(BCD3,LOW);digitalWrite(BCD4,HIGH);   //1001 in byPass mode
       Serial.print("ByPassSwitch is Low ");  //diagnostics
@@ -820,40 +862,74 @@ void set_frequency_PCF() { //procedure for setting output frequency
       else si5351.setFreq(0,(freq+IF_OFFSET)); //above 9.99MHz freq - offset else freq + offset
     if ((digitalRead(ByPass)==HIGH)) {  //Bypass is off (High)
     if (freq > 23500000) {   //10m band
-      digitalWrite(MUX0,LOW); digitalWrite(MUX1,HIGH); } // 01
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,HIGH);  // 01
+      si5351.setPower(0,SIOUT_4mA);
+      }
     if ((freq > 15000000) && (freq < 23500001)) {   //15m band
-      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW); } // 10
+      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW); // 10
+      si5351.setPower(0,SIOUT_4mA);
+      } 
     if ((freq >  8000000) && (freq < 15000001)) {   //20m band
-      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); }  // 00
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW);  // 00
+      si5351.setPower(0,SIOUT_8mA);
+      }
     if ((freq >  4500000) && (freq <  8000001)) {   //40m band
-      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW); } // 10
+      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW); // 10
+      si5351.setPower(0,SIOUT_4mA);
+      }
     if ((freq >  2200000) && (freq <  4500001)) {   //80m band
-      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); }  // 00
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); // 00
+      si5351.setPower(0,SIOUT_8mA);
+      }  
     if (freq  <  2200001) {                         //160m band
-      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); }  // 00
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); // 00
+      si5351.setPower(0,SIOUT_8mA);
+      }  
     } else {
       digitalWrite(MUX0,HIGH); digitalWrite(MUX1,HIGH);  // 11 in byPass mode
+      si5351.setPower(0,SIOUT_4mA);
       Serial.print("ByPassSwitch is Low ");  //diagnostics
     }
     } else {
     si5351.setFreq(0,freq);                 //send freq to Si5351
     if ((digitalRead(ByPass)==HIGH)) {      //Bypass is off (High)
     Serial.print("ByPassSwitch is High ");  //diagnostics
-    if (freq > 34000000){
-      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,HIGH); } // 11
-    if ((freq > 23500000) && (freq < 34000001)) { 
-      digitalWrite(MUX0,LOW); digitalWrite(MUX1,HIGH); }  // 01
-    if ((freq > 15000000) && (freq < 23500001)) { 
-      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW); }  // 10
-    if ((freq >  8000000) && (freq < 15000001)) { 
-      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); }   // 00
+    if (freq > 150000000) { 
+      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,HIGH);   // 11
+      si5351.setPower(0,SIOUT_8mA);
+      } 
+    if ((freq > 100000000) && (freq < 150000001)) { 
+      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,HIGH);   // 11
+      si5351.setPower(0,SIOUT_6mA);
+    }
+    if ((freq > 34000000) && (freq < 100000001)) { 
+      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,HIGH);   // 11
+      si5351.setPower(0,SIOUT_4mA);
+    }
+    if ((freq > 22000000) && (freq < 34000001)) { 
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,HIGH); 
+      si5351.setPower(0,SIOUT_4mA);
+      }  // 01
+    if ((freq > 11800000) && (freq < 22000001)) { 
+      digitalWrite(MUX0,HIGH); digitalWrite(MUX1,LOW); 
+      si5351.setPower(0,SIOUT_4mA);
+      }  // 10
+    if ((freq >  8000000) && (freq < 11800001)) { 
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); 
+      si5351.setPower(0,SIOUT_8mA);
+      }   // 00
     if ((freq >  4500000) && (freq <  8000001)) { 
-      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); }   // 00
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); 
+      si5351.setPower(0,SIOUT_8mA);
+      }   // 00
     if ((freq >  2200000) && (freq <  4500001)) { 
-      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); }   // 00
+      digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW); 
+      si5351.setPower(0,SIOUT_8mA);
+      }   // 00
     if ( freq <  2200000) { digitalWrite(MUX0,LOW); digitalWrite(MUX1,LOW);}  //00
     } else {
       digitalWrite(MUX0,HIGH); digitalWrite(MUX1,HIGH);   // 11 in byPass mode
+      si5351.setPower(0,SIOUT_4mA);
       Serial.print("ByPassSwitch is Low ");  //diagnostics
     }
   }
