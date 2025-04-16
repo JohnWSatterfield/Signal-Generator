@@ -101,9 +101,9 @@
  *   Remember, you are calibrating the Si5351 module, not the radio.  
 ----------------------------------------------------------*/
 
-#define CORRECTION     1467   //tuned on 20m at 14.250 - 8605000 typically 2.881 x freq = correction change
+#define CORRECTION     0   //tuned on 20m at 14.250 - 8605000 typically 2.881 x freq = correction change
 
-
+//T22 1409       MCU SigGen
 //T21 3466       MCU SigGen 
 
 #define CF NEWER           //OLDER for 5520 CO, NEWER for 5645 CO and DRAKE for Drake CF
@@ -304,7 +304,7 @@
 #define		CL_RED			0xFF0000UL		// 
 #define		CL_GREEN		0x00FF00UL		// 
 #define		CL_LT_BLUE	0x00FFFFUL		// 
-#define		CL_ORANGE		0xFFD080UL		// 
+#define		CL_ORANGE		0xF5930AUL		// 
 #define   CL_CYAN     0x00FFFFUL
 #define   CL_BLUE     0x0000FFUL
 #define   CL_YELLOW   0xFFFF00UL
