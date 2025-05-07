@@ -98,13 +98,8 @@
 #define TFT_BLACK2  0x0020  //opaque black
 
 // Micro Controller SPI Configuration -------------------------
-#if MC_TYPE == S3MINI || MC_TYPE == S2MINI
-  #define SPIHOST SPI3_HOST  // SPI2_HOST or SPI3_HOST 
-#else if MC_TYPE == WROVER
-  #define SPIHOST SPI2_HOST // VSPI_HOST or HSPI_HOST
-#endif
 
-
+#define SPIHOST SPI2_HOST
 #include <LovyanGFX.hpp>
 
 class LGFX : public lgfx::LGFX_Device
