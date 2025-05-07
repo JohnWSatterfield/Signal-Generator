@@ -101,14 +101,6 @@
 //#define DialBGCol   CL_DIAL_BG
 #define TFT_BLACK2  0x0020  //opaque black
 
-//#if MC_TYPE == S3MINI || MC_TYPE == S2MINI || MC_TYPE == S3ZERO || MC_TYPE == T7S3 || MC_TYPE == R8N16 || MC_TYPE == S3R8 || MC_TYPE == C3ZERO || MC_TYPE == RP2040 || MC_TYPE == C3FH4 || MC_TYPE == C3MINI
-  //#define SPIHOST SPI2_HOST  // SPI2_HOST or SPI3_HOST 
-//#endif
-//#if MC_TYPE == WROVER || MC_TYPE == D1MINI || MC_TYPE == WROOM
-  ////#define SPIHOST HSPI_HOST // VSPI_HOST or HSPI_HOST
-//#endif
-
-//#define LGFX_ESP32_S2
 #define SPIHOST SPI2_HOST
 
 #include <LovyanGFX.hpp>
